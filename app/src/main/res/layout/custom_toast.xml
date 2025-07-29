@@ -1,0 +1,25 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/toast_bg_ll"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/toast_fail_bg"
+    android:orientation="horizontal"
+    android:paddingHorizontal="22dp"
+    android:paddingVertical="8dp">
+
+    <ImageView
+        android:id="@+id/toast_iv"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/icon_toast_success" />
+
+    <TextView
+        android:id="@+id/toast_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="8dp"
+        android:textColor="@color/white_main"
+        android:textSize="16sp"
+        tools:text="人脸识别成功" />
+</LinearLayout>

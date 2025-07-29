@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- 顶层渐变：270度（从右到左） -->
+    <gradient
+        android:angle="270"
+        android:endColor="#4172F4"
+        android:gradientRadius="800dp"
+        android:startColor="#42A4F5"
+        android:type="linear"
+        android:useLevel="false" />
+</shape>

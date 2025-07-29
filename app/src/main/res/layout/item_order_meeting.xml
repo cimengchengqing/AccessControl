@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="26dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/container_bg_gray_12"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="17dp">
+
+        <ImageView
+            android:id="@+id/iv"
+            android:layout_width="20dp"
+            android:layout_height="19dp"
+            android:src="@drawable/icon_meeting_gray_small"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/meeting_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="14dp"
+            android:textColor="@color/black_main"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="@id/iv"
+            app:layout_constraintLeft_toRightOf="@id/iv"
+            app:layout_constraintTop_toTopOf="@id/iv"
+            tools:text="会议主题： 关于公司年终总结会议" />
+
+        <TextView
+            android:id="@+id/meeting_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/gray_main"
+            android:textSize="18sp"
+            app:layout_constraintLeft_toLeftOf="@id/meeting_title"
+            app:layout_constraintTop_toBottomOf="@id/meeting_title"
+            app:layout_goneMarginTop="18dp"
+            tools:text="会议时间：2025-07-22 11:00-12:00" />
+
+        <TextView
+            android:id="@+id/meeting_initiator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/gray_main"
+            android:textSize="18sp"
+            app:layout_constraintLeft_toLeftOf="@id/meeting_title"
+            app:layout_constraintTop_toBottomOf="@id/meeting_date"
+            app:layout_goneMarginTop="18dp"
+            tools:text="发起人：李总" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</LinearLayout>
