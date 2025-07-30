@@ -13,6 +13,7 @@ import com.meeting.accesscontrol.net.ApiService.DoorStatusRequest
 import com.meeting.accesscontrol.tools.AppConfig
 import com.meeting.accesscontrol.tools.CommonUtils
 import com.meeting.accesscontrol.tools.ImageUploadHelper
+import com.meeting.accesscontrol.tools.LogUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Random
@@ -58,7 +59,8 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                     _meetingResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))
                 }
             } catch (e: Exception) {
-                Log.e("主页", "requestMeetingInfo: ${e.message}")
+                LogUtils.e("主页", "requestMeetingInfo: ${e.message}")
+                _meetingResult.postValue(Result.failure(Exception("请求失败")))
             }
         }
     }
@@ -86,7 +88,8 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                     _uploadResult.postValue(Result.failure(Exception("请求出错")))
                 }
             } catch (e: Exception) {
-                Log.e("主页", "uploadFaceImage: ${e.message}")
+                LogUtils.e("主页", "uploadFaceImage: ${e.message}")
+                _uploadResult.postValue(Result.failure(Exception("${e.message}")))
             }
         }
     }
@@ -116,7 +119,8 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                     _recognitionResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))
                 }
             } catch (e: Exception) {
-                Log.e("主页", "verifyUserByMeeting: ${e.message}")
+                LogUtils.e("主页", "verifyUserByMeeting: ${e.message}")
+                _recognitionResult.postValue(Result.failure(Exception("${e.message}}")))
             }
         }
     }
@@ -146,7 +150,8 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                     _doorResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))
                 }
             } catch (e: Exception) {
-                Log.e("主页", "verifyUserByMeeting: ${e.message}")
+                LogUtils.e("主页", "verifyUserByMeeting: ${e.message}")
+                _doorResult.postValue(Result.failure(Exception("${e.message}")))
             }
         }
     }

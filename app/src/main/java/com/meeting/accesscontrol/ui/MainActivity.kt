@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -29,6 +30,8 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.meeting.accesscontrol.adapter.MeetingListAdapter
+import com.meeting.accesscontrol.aotu_launch.AutoStartPermissionHelper
+import com.meeting.accesscontrol.aotu_launch.BootStartupManager
 import com.meeting.accesscontrol.bean.Meeting
 import com.meeting.accesscontrol.bean.MeetingRoom
 import com.meeting.accesscontrol.databinding.ActivityMainBinding
@@ -70,11 +73,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusTextView: TextView   //状态提示的view
     private lateinit var previewView: PreviewView
     private lateinit var preview: Preview
+    private var cameraSelector: CameraSelector? = null
     private lateinit var cameraProvider: ProcessCameraProvider
-    private lateinit var cameraExecutor: ExecutorService
+    private var cameraExecutor: ExecutorService? = null
     private var imageCapture: ImageCapture? = null
     private var imageAnalysis: ImageAnalysis? = null
     private var analysisActive = false
+    private var cameraInitiated = false
     private lateinit var faceDetector: FaceDetector
 
     // 状态管理变量
@@ -86,12 +91,14 @@ class MainActivity : AppCompatActivity() {
         Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
     }
 
+    private lateinit var autoStartPermissionHelper: AutoStartPermissionHelper
     private val mToast: CustomToast = CustomToast.getInstance()
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         LogUtils.d(TAG, "onCreate: ")
+        hideVirtualKey()
+
         _binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -109,7 +116,44 @@ class MainActivity : AppCompatActivity() {
         initEvents()
     }
 
+    /**
+     * 检查自启动权限
+     */
+    private fun checkAutoStartPermission() {
+        try {
+            val hasPermission = autoStartPermissionHelper.checkAutoStartPermission()
+            val message = if (hasPermission) "自启动权限已授予" else "自启动权限未授予"
+            LogUtils.d(TAG, "自启动权限检查结果: $message")
+
+        } catch (e: Exception) {
+            LogUtils.e(TAG, "检查自启动权限失败", e)
+        }
+    }
+
+    /**
+     * 测试开机启动
+     */
+    private fun testBootStartup() {
+        try {
+            LogUtils.d(TAG, "测试开机启动")
+
+            // 模拟开机启动
+            BootStartupManager.getInstance(this).startAppImmediately()
+
+            CustomToast.getInstance().showSuccess(this, "测试完成")
+
+        } catch (e: Exception) {
+            LogUtils.e(TAG, "测试开机启动失败", e)
+            updateStatus("测试失败: ${e.message}")
+            CustomToast.getInstance().showError(this, "测试失败")
+        }
+    }
+
     private fun initEvents() {
+        binding.meetingRoomIv.setOnClickListener {
+
+        }
+
         binding.cancelButton.setOnClickListener {
             stopFaceAnalysis()
         }
@@ -123,16 +167,25 @@ class MainActivity : AppCompatActivity() {
                 LogUtils.d(TAG, "请求会议信息成功 ")
                 updateMeetingStatus(bean)
             }.onFailure { e ->
-                Toast.makeText(applicationContext, "获取会议信息失败", Toast.LENGTH_SHORT).show()
+                mToast.showError(applicationContext, "获取会议信息失败")
             }
         }
 
         mViewModel.uploadResult.observe(this) { result ->
             result.onSuccess { id ->
                 // 人脸识别完成，拿到用户id和会议id，校验是否能够参加会议
-                currMeeting?.meetingId?.let {
-                    mViewModel.verifyUserByMeeting(id.toLong(), it.toLong())
-                } ?: mToast.showError(applicationContext, "没有进行中的会议")
+                try {
+                    currMeeting?.let {
+                        mViewModel.verifyUserByMeeting(id.toLong(), it.meetingId.toLong())
+                    } ?: run {
+                        mToast.showError(applicationContext, "没有进行中的会议")
+                        stopFaceAnalysis()
+                        isCapturing = false
+                    }
+                } catch (e: Exception) {
+                    mToast.showError(applicationContext, "请求出错")
+                    isCapturing = false
+                }
             }.onFailure { e ->
                 mToast.showError(applicationContext, "人脸识别失败")
                 isCapturing = false
@@ -157,7 +210,7 @@ class MainActivity : AppCompatActivity() {
                 mToast.showSuccess(applicationContext, "人脸识别成功")
             }.onFailure { e ->
                 //门禁打开失败
-                mToast.showError(applicationContext, "人脸识别失败")
+                mToast.showError(applicationContext, "人门禁开启失败")
             }
             stopFaceAnalysis()
             isCapturing = false
@@ -210,7 +263,7 @@ class MainActivity : AppCompatActivity() {
                             "会议时间：${TimeFormatter.getHoursForTimestamp(firstMeeting.startTime)} 开始"
                         binding.meetingInitiatorTv.text = "发起人：${firstMeeting.promoter}"
                         binding.meetingParticipantTv.visibility = View.GONE
-                        binding.faceIdentificationRl.visibility = View.GONE
+                        binding.faceIdentificationRl.visibility = View.VISIBLE
 
                         "空闲中"
                     }
@@ -290,12 +343,13 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         LogUtils.d(TAG, "onResume: ")
         mViewModel.requestMeetingInfo(deviceID)
+        checkAutoStartPermission()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         LogUtils.d(TAG, "onDestroy: ")
-        cameraExecutor.shutdown()
+        cameraExecutor?.shutdown()
         faceDetector.close()
         handler.removeCallbacks(timeRunnable) // 防止内存泄漏
     }
@@ -321,7 +375,6 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 val (time, date) = getCurrentTimeAndDate()
                 val currTime = binding.timeTv.text
-//                LogUtils.d(TAG, "currTime:$currTime ")
                 if (!currTime.equals("") && time != currTime) {
                     mViewModel.requestMeetingInfo(deviceID)
                 }
@@ -335,29 +388,100 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 初始化相机
-     * 使用 CameraX API进行预览
+     * 初始化相机相关配置
      */
     private fun initCamera() {
-        cameraExecutor = Executors.newSingleThreadExecutor()
         //配置人脸检测参数（可选，高精度模式/轮廓模式等）
         val options = FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
             .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL).enableTracking().build()
         faceDetector = FaceDetection.getClient(options)
 
+        // 初始化 Preview 对象，在该对象上调用 build，从取景器中获取表面提供程序，然后在预览中进行设置。
+        preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(previewView.surfaceProvider)
+        }
+
+        imageCapture =
+            ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .build()
+
+        // 配置图像分析
+        cameraExecutor = Executors.newSingleThreadExecutor()
+        imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also {
+                it.setAnalyzer(cameraExecutor!!) { imageProxy ->
+                    LogUtils.d(TAG, "Analyzer 收到回调")
+                    processImageProxy(imageProxy)
+                }
+            }
+
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
-            // 用于将相机的生命周期绑定到生命周期所有者
-            // 消除了打开和关闭相机的任务，因为 CameraX 具有生命周期感知能力
+            // 将相机的生命周期绑定到生命周期所有者.消除了打开和关闭相机的任务，因为 CameraX 具有生命周期感知能力
             cameraProvider = cameraProviderFuture.get()
 
-            // 检查PreviewView是否已初始化
-//            if (previewView.width == 0 || previewView.height == 0) {
-//                LogUtils.w(TAG, "PreviewView尺寸为0，等待布局完成")
-//                return@addListener
-//            }
-            // 预览配置
+            // 优先使用前置摄像头（人脸识别）
+            cameraSelector =
+                if (cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
+                    LogUtils.d(TAG, "前置摄像头")
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                } else if (cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
+                    LogUtils.d(TAG, "后置摄像头")
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                } else {
+                    null
+                }
+            cameraInitiated = true
+        }, ContextCompat.getMainExecutor(this)) // 回调代码在主线程处理
+    }
+
+    /**
+     * 开启人脸分析
+     */
+    private fun startFaceAnalysis() {
+        if (cameraInitiated && !analysisActive && cameraSelector != null) {
+            analysisActive = true
+            cameraProvider.let {
+                try {
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(
+                        this, cameraSelector!!, preview, imageCapture, imageAnalysis
+                    )
+                    LogUtils.d(TAG, "初始化完成")
+                    binding.faceInputContainer.visibility = View.VISIBLE
+                    binding.orderContainer.visibility = View.GONE
+                } catch (exc: Exception) {
+                    LogUtils.e(TAG, "相机绑定失败", exc)
+                    mToast.showError(this, "相机绑定失败")
+                }
+            }
+        } else {
+            mToast.showError(applicationContext, "相机未准备好")
+        }
+    }
+
+    /**
+     * 暂停人脸分析
+     */
+    private fun stopFaceAnalysis() {
+        cameraProvider.unbindAll()
+        analysisActive = false
+        binding.faceInputContainer.visibility = View.GONE
+        binding.orderContainer.visibility = View.VISIBLE
+    }
+
+    /**
+     * 初始化相机
+     * 使用 CameraX API进行预览
+     */
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener({
+            // 1、将相机的生命周期绑定到生命周期所有者.消除了打开和关闭相机的任务，因为 CameraX 具有生命周期感知能力
+            cameraProvider = cameraProviderFuture.get()
+
+            // 2、初始化您的 Preview 对象，在该对象上调用 build，从取景器中获取表面提供程序，然后在预览中进行设置。
             preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
@@ -367,8 +491,14 @@ class MainActivity : AppCompatActivity() {
                     .build()
 
             // 配置图像分析
+            cameraExecutor = Executors.newSingleThreadExecutor()
             imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also {
+                    it.setAnalyzer(cameraExecutor!!) { imageProxy ->
+                        LogUtils.d(TAG, "Analyzer 收到回调")
+                        processImageProxy(imageProxy)
+                    }
+                }
 
             // 优先使用前置摄像头（人脸识别）
             val cameraSelector =
@@ -396,43 +526,10 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this)) // 回调代码在主线程处理
     }
 
-    /**
-     * 开启人脸分析
-     */
-    private fun startFaceAnalysis() {
-        if (imageAnalysis == null) {
-            LogUtils.w(TAG, "imageAnalysis为null，重新初始化相机")
-            initCamera()
-            return
-        } else {
-            binding.faceInputContainer.visibility = View.VISIBLE
-            binding.orderContainer.visibility = View.GONE
-            if (!analysisActive) {
-                imageAnalysis?.setAnalyzer(cameraExecutor) { imageProxy ->
-                    LogUtils.d(TAG, "Analyzer 收到回调")
-                    processImageProxy(imageProxy)
-                }
-                LogUtils.d(TAG, "setAnalyzer 完成")
-                analysisActive = true
-            }
-        }
-    }
 
     /**
-     * 暂停人脸分析
+     * 照片分析
      */
-    private fun stopFaceAnalysis() {
-        if (imageAnalysis == null) {
-            return
-        }
-        binding.faceInputContainer.visibility = View.GONE
-        binding.orderContainer.visibility = View.VISIBLE
-        if (analysisActive) {
-            imageAnalysis?.clearAnalyzer()
-            analysisActive = false
-        }
-    }
-
     @SuppressLint("UnsafeOptInUsageError")
     private fun processImageProxy(imageProxy: ImageProxy) {
         // 如果正在拍照，则跳过分析
@@ -522,12 +619,6 @@ class MainActivity : AppCompatActivity() {
         return distance < maskRadius && faceWidth < maskRadius * 2
     }
 
-    private fun updateStatus(text: String) {
-        runOnUiThread {
-            statusTextView.text = text
-        }
-    }
-
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
         imageCapture.takePicture(
@@ -549,6 +640,14 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
+    /**
+     * 更新人脸录制提示状态
+     */
+    private fun updateStatus(text: String) {
+        runOnUiThread {
+            statusTextView.text = text
+        }
+    }
 
     private fun imageProxyToBitmap(image: ImageProxy): Bitmap {
         val buffer = image.planes[0].buffer
@@ -588,4 +687,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+}
+
+private fun MainActivity.hideVirtualKey() {
+    val decorView = getWindow().getDecorView()
+    val uiOptions = (View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+    decorView.setSystemUiVisibility(uiOptions)
 }

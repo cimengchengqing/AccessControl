@@ -2,14 +2,48 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="true" />
 
-    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!--相机权限-->
+    <uses-feature android:name="android.hardware.camera.any" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- 开机自启动权限 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- 系统权限 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Android 8.0+ 前台服务权限 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Android 12+ 精确闹钟权限 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- 厂商特定权限 -->
+    <uses-permission android:name="com.huawei.android.launcher.permission.CHANGE_BADGE" />
+    <uses-permission android:name="com.huawei.android.launcher.permission.READ_SETTINGS" />
+    <uses-permission android:name="com.huawei.android.launcher.permission.WRITE_SETTINGS" />
+
+    <uses-permission android:name="com.oppo.launcher.permission.READ_SETTINGS" />
+    <uses-permission android:name="com.oppo.launcher.permission.WRITE_SETTINGS" />
+
+    <uses-permission android:name="com.vivo.launcher.permission.READ_SETTINGS" />
+    <uses-permission android:name="com.vivo.launcher.permission.WRITE_SETTINGS" />
+
+    <uses-permission android:name="com.samsung.android.launcher.permission.READ_SETTINGS" />
+    <uses-permission android:name="com.samsung.android.launcher.permission.WRITE_SETTINGS" />
+
+    <uses-permission android:name="com.meizu.launcher.permission.READ_SETTINGS" />
+    <uses-permission android:name="com.meizu.launcher.permission.WRITE_SETTINGS" />
 
     <application
+        android:name=".MyApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -17,8 +51,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AccessControl"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
         <activity
@@ -33,6 +67,49 @@
             </intent-filter>
 
         </activity>
+
+        <!-- 开机广播接收器 -->
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            <intent-filter android:priority="1000">
+                <!-- 标准开机广播 -->
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <action android:name="android.intent.action.PACKAGE_FULLY_INSTALLED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.REBOOT" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+
+                <!-- 厂商特定开机广播 -->
+                <action android:name="com.huawei.android.launcher.permission.CHANGE_BADGE" />
+                <action android:name="android.intent.action.MIUI_BOOT_COMPLETED" />
+                <action android:name="oppo.intent.action.OPPO_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.VIVO_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.SAMSUNG_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MEIZU_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LETV_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.ZTE_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.COOLPAD_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LENOVO_BOOT_COMPLETED" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 延迟启动广播接收器 -->
+        <receiver
+            android:name=".receiver.BootStartupReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.your.package.DELAY_STARTUP" />
+            </intent-filter>
+        </receiver>
 
     </application>
 
