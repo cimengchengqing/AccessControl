@@ -11,6 +11,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Query
 
@@ -51,7 +52,16 @@ interface ApiService {
         @Header("appid") appid: String = APP_ID,
         @Header("sign") sign: String,
         @Body request: JudgeRequest
-    ): Response<ResponseBody>
+    ): Response<AppResponse<String>>
+
+
+    /**
+     * 设置门状态（门禁开关）
+     * @param request 门状态请求参数
+     * @return 响应结果
+     */
+    @PUT("http://172.40.10.20:11125/api/mg/v3/egs/control/door-status")
+    suspend fun setDoorStatus(@Body request: DoorStatusRequest): Response<ResponseBody>
 
     /**
      * 请求响应结果
@@ -60,6 +70,14 @@ interface ApiService {
         val code: Int,
         val message: String,
         val data: T
+    )
+
+    /**
+     * 门状态请求参数
+     */
+    data class DoorStatusRequest(
+        val channel_nos: List<String>,
+        val door_status: Int
     )
 
     /**

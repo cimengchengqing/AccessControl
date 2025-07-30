@@ -1,6 +1,7 @@
 package com.meeting.accesscontrol.viewmodel
 
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -8,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.meeting.accesscontrol.bean.JudgeRequest
 import com.meeting.accesscontrol.bean.MeetingRoom
 import com.meeting.accesscontrol.net.ApiService
+import com.meeting.accesscontrol.net.ApiService.DoorStatusRequest
 import com.meeting.accesscontrol.tools.AppConfig
 import com.meeting.accesscontrol.tools.CommonUtils
 import com.meeting.accesscontrol.tools.ImageUploadHelper
@@ -22,6 +24,12 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
 
     private val _uploadResult = MutableLiveData<Result<String>>()
     val uploadResult: LiveData<Result<String>> = _uploadResult
+
+    private val _recognitionResult = MutableLiveData<Result<String>>()
+    val recognitionResult: LiveData<Result<String>> = _recognitionResult
+
+    private val _doorResult = MutableLiveData<Result<String>>()
+    val doorResult: LiveData<Result<String>> = _doorResult
 
     //图片上传辅助工具
     private val imageUploadHelper = ImageUploadHelper()
@@ -45,13 +53,12 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                         } else {
                             _meetingResult.postValue(Result.failure(Exception("请求出错: ${it.message}")))
                         }
-                    }
-
+                    } ?: _meetingResult.postValue(Result.failure(Exception("请求出错")))
                 } else {
                     _meetingResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))
                 }
             } catch (e: Exception) {
-
+                Log.e("主页", "requestMeetingInfo: ${e.message}")
             }
         }
     }
@@ -71,16 +78,15 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                         result?.let {
                             val faceResult = it[0]
                             val faces = faceResult.subjects
-                            val userId = faces.sortedByDescending { it.similarity }[0]
+                            val userId = faces.sortedByDescending { it.similarity }[0].subject
                             _uploadResult.postValue(Result.success("$userId"))
                         } ?: _uploadResult.postValue(Result.failure(Exception("请求出错")))
                     }
-                    _uploadResult.postValue(Result.success("上传成功"))
                 } else {
                     _uploadResult.postValue(Result.failure(Exception("请求出错")))
                 }
             } catch (e: Exception) {
-
+                Log.e("主页", "uploadFaceImage: ${e.message}")
             }
         }
     }
@@ -88,7 +94,7 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
     /**
      * 与会人员信息校验
      */
-    fun verifyUserByMeeting(userID: Int, meetingID: Int) {
+    fun verifyUserByMeeting(userID: Long, meetingID: Long) {
         val nonce = Random().nextInt(10000).toString()
         val timestamp = (System.currentTimeMillis()).toString()
         val sign = CommonUtils.md5(AppConfig.SECRET_KEY + timestamp + nonce)
@@ -98,12 +104,49 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                 val response =
                     apiService.accessControlJudge(nonce, timestamp, AppConfig.APP_ID, sign, request)
                 if (response.isSuccessful) {
-
+                    val body = response.body()
+                    body?.let {
+                        if (it.code == 0) {
+                            _recognitionResult.postValue(Result.success(body.data))
+                        } else {
+                            _recognitionResult.postValue(Result.failure(Exception("${it.message}")))
+                        }
+                    } ?: _recognitionResult.postValue(Result.failure(Exception("请求出错")))
                 } else {
-
+                    _recognitionResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))
                 }
             } catch (e: Exception) {
+                Log.e("主页", "verifyUserByMeeting: ${e.message}")
+            }
+        }
+    }
 
+    /**
+     * 远程设置门禁状态
+     * channel_ID:门禁设备id
+     * door_status:
+     * 1 常开
+     * 2 常闭
+     * 3 开
+     * 4 关
+     * 5 正常
+     */
+    fun settingDoorStatus(channel_ID: String, door_status: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val ids = listOf<String>(channel_ID)
+                val request = DoorStatusRequest(ids, door_status)
+                val response = apiService.setDoorStatus(request)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    body?.let {
+                        _doorResult.postValue(Result.success("请求成功"))
+                    } ?: _doorResult.postValue(Result.failure(Exception("请求出错")))
+                } else {
+                    _doorResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))
+                }
+            } catch (e: Exception) {
+                Log.e("主页", "verifyUserByMeeting: ${e.message}")
             }
         }
     }

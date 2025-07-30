@@ -25,7 +25,7 @@ class NetworkManager private constructor(private val context: Context) {
             .connectTimeout(NetworkConfig.CONNECT_TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(NetworkConfig.READ_TIMEOUT, TimeUnit.SECONDS)
             .writeTimeout(NetworkConfig.WRITE_TIMEOUT, TimeUnit.SECONDS)
-//            .addInterceptor(AuthInterceptor(context))
+            .addInterceptor(AuthInterceptor(context))
             .addInterceptor(LoggingInterceptor(BuildConfig.DEBUG))
             .build()
     }

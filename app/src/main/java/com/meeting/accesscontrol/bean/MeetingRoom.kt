@@ -10,7 +10,7 @@ data class MeetingRoom(
 data class Meeting(
     val title: String,      //会议主题
     val promoter: String,     //发起人名字
-    val meetingId: Int,     //会议ID
+    val meetingId: String,     //会议ID
     val startTime: Long,
     val endTime: Long,
     val userInfoList: List<UserInfo>

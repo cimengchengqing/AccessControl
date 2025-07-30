@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -35,6 +34,7 @@ import com.meeting.accesscontrol.bean.MeetingRoom
 import com.meeting.accesscontrol.databinding.ActivityMainBinding
 import com.meeting.accesscontrol.net.ApiService
 import com.meeting.accesscontrol.net.NetworkManager
+import com.meeting.accesscontrol.tools.LogUtils
 import com.meeting.accesscontrol.tools.TimeFormatter
 import com.meeting.accesscontrol.view.CustomToast
 import com.meeting.accesscontrol.view.FaceScanMaskView
@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity() {
 
     private var orderMeetings = mutableListOf<Meeting>()    //预约的会议列表（除去当前正在进行的会议）
     private var currMeeting: Meeting? = null
+    private var roomDoorId: String? = null  // 会议室门禁设备ID
     private lateinit var adapter: MeetingListAdapter
 
     private val apiService by lazy {
@@ -90,16 +91,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate: ")
+        LogUtils.d(TAG, "onCreate: ")
         _binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         mViewModel = MainViewModel(apiService)
-        Log.d(TAG, "ANDROID_ID: $deviceID")
+        LogUtils.d(TAG, "ANDROID_ID: $deviceID")
         //检查权限
         if (!allPermissionsGranted()) {
             // 请求权限
-            Log.d("MainActivity", "onCreate: 去请求拍照权限")
+            LogUtils.d("MainActivity", "onCreate: 去请求拍照权限")
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
 
@@ -119,7 +120,7 @@ class MainActivity : AppCompatActivity() {
 
         mViewModel.meetingResult.observe(this) { result ->
             result.onSuccess { bean ->
-                mToast.showSuccess(applicationContext, "请求会议信息成功")
+                LogUtils.d(TAG, "请求会议信息成功 ")
                 updateMeetingStatus(bean)
             }.onFailure { e ->
                 Toast.makeText(applicationContext, "获取会议信息失败", Toast.LENGTH_SHORT).show()
@@ -127,17 +128,39 @@ class MainActivity : AppCompatActivity() {
         }
 
         mViewModel.uploadResult.observe(this) { result ->
-            isCapturing = false
             result.onSuccess { id ->
-//                mToast.showSuccess(applicationContext, "人脸识别成功")
+                // 人脸识别完成，拿到用户id和会议id，校验是否能够参加会议
                 currMeeting?.meetingId?.let {
-                    mViewModel.verifyUserByMeeting(id.toInt(), it)
+                    mViewModel.verifyUserByMeeting(id.toLong(), it.toLong())
                 } ?: mToast.showError(applicationContext, "没有进行中的会议")
+            }.onFailure { e ->
+                mToast.showError(applicationContext, "人脸识别失败")
+                isCapturing = false
+            }
+        }
 
-                stopFaceAnalysis()
+        mViewModel.recognitionResult.observe(this) { result ->
+            result.onSuccess { id ->
+                //识别成功，请求打开门禁
+                roomDoorId?.let {
+                    mViewModel.settingDoorStatus(it, 3)
+                }
             }.onFailure { e ->
                 mToast.showError(applicationContext, "人脸识别失败")
             }
+            isCapturing = false
+        }
+
+        mViewModel.doorResult.observe(this) { result ->
+            result.onSuccess { msg ->
+                //门禁已打开
+                mToast.showSuccess(applicationContext, "人脸识别成功")
+            }.onFailure { e ->
+                //门禁打开失败
+                mToast.showError(applicationContext, "人脸识别失败")
+            }
+            stopFaceAnalysis()
+            isCapturing = false
         }
     }
 
@@ -146,6 +169,10 @@ class MainActivity : AppCompatActivity() {
      * 2、更具具体情况展示当前会与会议或者下场会议
      */
     private fun updateMeetingStatus(bean: MeetingRoom) {
+        LogUtils.d(TAG, "updateMeetingStatus: ")
+
+        roomDoorId = bean.deviceId
+
         runOnUiThread {
             bean.roomName?.let {
                 binding.meetingRoomTv.text = it
@@ -167,9 +194,9 @@ class MainActivity : AppCompatActivity() {
                 val data =
                     bean.meetingInfoList
                         .sortedBy { it.startTime }
-                        .filter { meeting: Meeting ->
-                            meeting.endTime > currTime
-                        }
+//                        .filter { meeting: Meeting ->
+//                            meeting.endTime > currTime
+//                        }
                 orderMeetings.addAll(data)  //如果第一条会议在20分钟以内开始或者已经开始，不需要展示到“今日预约”
 
                 //获取第一条会议信息进行处理
@@ -183,7 +210,7 @@ class MainActivity : AppCompatActivity() {
                             "会议时间：${TimeFormatter.getHoursForTimestamp(firstMeeting.startTime)} 开始"
                         binding.meetingInitiatorTv.text = "发起人：${firstMeeting.promoter}"
                         binding.meetingParticipantTv.visibility = View.GONE
-                        binding.faceIdentificationRl.visibility = View.VISIBLE
+                        binding.faceIdentificationRl.visibility = View.GONE
 
                         "空闲中"
                     }
@@ -206,6 +233,7 @@ class MainActivity : AppCompatActivity() {
                         binding.faceIdentificationRl.visibility = View.VISIBLE
 
                         orderMeetings.removeAt(0)
+                        LogUtils.d(TAG, "移除数据（会议待开始），会议长度=${orderMeetings.size}")
 
                         "会议待开始"
                     }
@@ -220,12 +248,13 @@ class MainActivity : AppCompatActivity() {
                                 )
                             }"
                         binding.meetingInitiatorTv.text = "发起人：${firstMeeting.promoter}"
-                        val peoples = firstMeeting.userInfoList.map { it.name }.joinToString { "、" }
+                        val peoples = firstMeeting.userInfoList.map { it.name }.joinToString("、")
                         binding.meetingParticipantTv.text = "参会人员：$peoples"
                         binding.meetingParticipantTv.visibility = View.VISIBLE
                         binding.faceIdentificationRl.visibility = View.VISIBLE
 
                         orderMeetings.removeAt(0)
+                        LogUtils.d(TAG, "移除数据（会议进行中），会议长度=${orderMeetings.size}")
 
                         "会议进行中"
                     }
@@ -259,13 +288,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "onResume: ")
+        LogUtils.d(TAG, "onResume: ")
         mViewModel.requestMeetingInfo(deviceID)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy: ")
+        LogUtils.d(TAG, "onDestroy: ")
         cameraExecutor.shutdown()
         faceDetector.close()
         handler.removeCallbacks(timeRunnable) // 防止内存泄漏
@@ -292,7 +321,8 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 val (time, date) = getCurrentTimeAndDate()
                 val currTime = binding.timeTv.text
-                if (time != currTime) {
+//                LogUtils.d(TAG, "currTime:$currTime ")
+                if (!currTime.equals("") && time != currTime) {
                     mViewModel.requestMeetingInfo(deviceID)
                 }
                 binding.timeTv.text = time
@@ -324,7 +354,7 @@ class MainActivity : AppCompatActivity() {
 
             // 检查PreviewView是否已初始化
 //            if (previewView.width == 0 || previewView.height == 0) {
-//                Log.w(TAG, "PreviewView尺寸为0，等待布局完成")
+//                LogUtils.w(TAG, "PreviewView尺寸为0，等待布局完成")
 //                return@addListener
 //            }
             // 预览配置
@@ -343,10 +373,10 @@ class MainActivity : AppCompatActivity() {
             // 优先使用前置摄像头（人脸识别）
             val cameraSelector =
                 if (cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
-                    Log.d(TAG, "前置摄像头")
+                    LogUtils.d(TAG, "前置摄像头")
                     CameraSelector.DEFAULT_FRONT_CAMERA
                 } else if (cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
-                    Log.d(TAG, "后置摄像头")
+                    LogUtils.d(TAG, "后置摄像头")
                     CameraSelector.DEFAULT_BACK_CAMERA
                 } else {
                     mToast.showError(this, "设备没有可用摄像头")
@@ -358,9 +388,9 @@ class MainActivity : AppCompatActivity() {
                 cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview, imageCapture, imageAnalysis
                 )
-                Log.d(TAG, "相机初始化成功")
+                LogUtils.d(TAG, "相机初始化成功")
             } catch (exc: Exception) {
-                Log.e(TAG, "相机绑定失败", exc)
+                LogUtils.e(TAG, "相机绑定失败", exc)
                 mToast.showError(this, "相机绑定失败")
             }
         }, ContextCompat.getMainExecutor(this)) // 回调代码在主线程处理
@@ -371,7 +401,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun startFaceAnalysis() {
         if (imageAnalysis == null) {
-            Log.w(TAG, "imageAnalysis为null，重新初始化相机")
+            LogUtils.w(TAG, "imageAnalysis为null，重新初始化相机")
             initCamera()
             return
         } else {
@@ -379,10 +409,10 @@ class MainActivity : AppCompatActivity() {
             binding.orderContainer.visibility = View.GONE
             if (!analysisActive) {
                 imageAnalysis?.setAnalyzer(cameraExecutor) { imageProxy ->
-                    Log.d(TAG, "Analyzer 收到回调")
+                    LogUtils.d(TAG, "Analyzer 收到回调")
                     processImageProxy(imageProxy)
                 }
-                Log.d(TAG, "setAnalyzer 完成")
+                LogUtils.d(TAG, "setAnalyzer 完成")
                 analysisActive = true
             }
         }
@@ -506,10 +536,7 @@ class MainActivity : AppCompatActivity() {
                     val bitmap = imageProxyToBitmap(imageProxy)
                     imageProxy.close()
                     mViewModel.uploadFaceImage(bitmap)
-//                    Toast.makeText(baseContext, "人脸已采集！", Toast.LENGTH_SHORT).show()
                     updateStatus("采集成功，正在识别")
-//                    isCapturing = false // 允许再次采集
-//                    stopFaceAnalysis()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
