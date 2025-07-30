@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity() {
                 mToast.showSuccess(applicationContext, "人脸识别成功")
             }.onFailure { e ->
                 //门禁打开失败
-                mToast.showError(applicationContext, "人门禁开启失败")
+                mToast.showError(applicationContext, "门禁开启失败")
             }
             stopFaceAnalysis()
             isCapturing = false
@@ -257,7 +257,7 @@ class MainActivity : AppCompatActivity() {
                             "会议时间：${TimeFormatter.getHoursForTimestamp(firstMeeting.startTime)} 开始"
                         binding.meetingInitiatorTv.text = "发起人：${firstMeeting.promoter}"
                         binding.meetingParticipantTv.visibility = View.GONE
-                        binding.faceIdentificationRl.visibility = View.GONE
+                        binding.faceIdentificationRl.visibility = View.VISIBLE
 
                         "空闲中"
                     }
@@ -625,9 +625,6 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    Toast.makeText(
-                        baseContext, "拍照失败: ${exception.message}", Toast.LENGTH_SHORT
-                    ).show()
                     updateStatus("采集失败，请重试")
                     isCapturing = false
                 }
