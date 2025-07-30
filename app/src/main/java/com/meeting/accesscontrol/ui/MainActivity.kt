@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -31,7 +30,6 @@ import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.meeting.accesscontrol.adapter.MeetingListAdapter
 import com.meeting.accesscontrol.aotu_launch.AutoStartPermissionHelper
-import com.meeting.accesscontrol.aotu_launch.BootStartupManager
 import com.meeting.accesscontrol.bean.Meeting
 import com.meeting.accesscontrol.bean.MeetingRoom
 import com.meeting.accesscontrol.databinding.ActivityMainBinding
@@ -133,27 +131,23 @@ class MainActivity : AppCompatActivity() {
     /**
      * 测试开机启动
      */
-    private fun testBootStartup() {
-        try {
-            LogUtils.d(TAG, "测试开机启动")
-
-            // 模拟开机启动
-            BootStartupManager.getInstance(this).startAppImmediately()
-
-            CustomToast.getInstance().showSuccess(this, "测试完成")
-
-        } catch (e: Exception) {
-            LogUtils.e(TAG, "测试开机启动失败", e)
-            updateStatus("测试失败: ${e.message}")
-            CustomToast.getInstance().showError(this, "测试失败")
-        }
-    }
+//    private fun testBootStartup() {
+//        try {
+//            LogUtils.d(TAG, "测试开机启动")
+//
+//            // 模拟开机启动
+//            BootStartupManager.getInstance(this).startAppImmediately()
+//
+//            CustomToast.getInstance().showSuccess(this, "测试完成")
+//
+//        } catch (e: Exception) {
+//            LogUtils.e(TAG, "测试开机启动失败", e)
+//            updateStatus("测试失败: ${e.message}")
+//            CustomToast.getInstance().showError(this, "测试失败")
+//        }
+//    }
 
     private fun initEvents() {
-        binding.meetingRoomIv.setOnClickListener {
-
-        }
-
         binding.cancelButton.setOnClickListener {
             stopFaceAnalysis()
         }
@@ -263,7 +257,7 @@ class MainActivity : AppCompatActivity() {
                             "会议时间：${TimeFormatter.getHoursForTimestamp(firstMeeting.startTime)} 开始"
                         binding.meetingInitiatorTv.text = "发起人：${firstMeeting.promoter}"
                         binding.meetingParticipantTv.visibility = View.GONE
-                        binding.faceIdentificationRl.visibility = View.VISIBLE
+                        binding.faceIdentificationRl.visibility = View.GONE
 
                         "空闲中"
                     }
