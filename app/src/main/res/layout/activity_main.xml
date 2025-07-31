@@ -1,4 +1,4 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -7,340 +7,421 @@
     android:orientation="horizontal"
     android:padding="40dp">
 
-    <!--会议室当前状态-->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/left_container"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:id="@+id/root_view"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginEnd="20dp"
-        android:layout_weight="66"
-        android:background="@drawable/container_bg_white_16">
-
-        <ImageView
-            android:id="@+id/meeting_room_iv"
-            android:layout_width="28dp"
-            android:layout_height="27dp"
-            android:layout_marginStart="31dp"
-            android:layout_marginTop="29dp"
-            android:src="@drawable/icon_meeting_blue"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/meeting_room_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="14dp"
-            android:text=""
-            android:textColor="@color/blue_main"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            app:layout_constraintLeft_toRightOf="@id/meeting_room_iv"
-            app:layout_constraintTop_toTopOf="@id/meeting_room_iv"
-            tools:text="003 号会议室" />
-
-        <TextView
-            android:id="@+id/time_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="25dp"
-            android:text=""
-            android:textStyle="normal"
-            android:textColor="@color/black_main"
-            android:textSize="50sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/meeting_room_iv"
-            tools:text="15 : 50" />
-
-        <TextView
-            android:id="@+id/date_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text=""
-            android:textColor="@color/gray_main"
-            android:textSize="20sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/time_tv" />
-
-        <TextView
-            android:id="@+id/meeting_statues_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="25dp"
-            android:text=""
-            android:textColor="@color/blue_main"
-            android:textSize="60sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/date_tv"
-            tools:text="会议进行中" />
-
-        <LinearLayout
-            android:id="@+id/meeting_content_ll"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="55dp"
-            android:layout_marginVertical="30dp"
-            android:background="@drawable/container_bg_gray_12"
-            android:orientation="vertical"
-            android:paddingHorizontal="30dp"
-            android:paddingVertical="20dp"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/meeting_statues_tv">
-
-            <TextView
-                android:id="@+id/meeting_title_tv"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/black_main"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                tools:text="会议主题： 关于公司年终总结会议" />
-
-            <TextView
-                android:id="@+id/meeting_time_tv"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:textColor="@color/gray_main"
-                android:textSize="20sp"
-                tools:text="会议时间：2025-07-22 11:00-12:00" />
-
-            <TextView
-                android:id="@+id/meeting_initiator_tv"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:textColor="@color/gray_main"
-                android:textSize="20sp"
-                tools:text="发起人：李总" />
-
-            <TextView
-                android:id="@+id/meeting_participant_tv"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:ellipsize="end"
-                android:lines="1"
-                android:textColor="@color/gray_main"
-                android:textSize="20sp"
-                tools:text="参会人员：李总、陈总、张总、徐总、朱总" />
-
-        </LinearLayout>
-
-        <RelativeLayout
-            android:id="@+id/face_identification_rl"
-            android:layout_width="match_parent"
-            android:layout_height="55dp"
-            android:layout_marginHorizontal="55dp"
-            android:layout_marginVertical="30dp"
-            android:background="@drawable/face_identification_selector"
-            android:clickable="true"
-            android:gravity="center"
-            android:visibility="gone"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/meeting_content_ll">
+        android:baselineAligned="false"
+        android:orientation="horizontal"
+        android:visibility="gone">
+        <!--会议室当前状态-->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/left_container"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="66"
+            android:background="@drawable/container_bg_white_16">
 
             <ImageView
-                android:id="@+id/face_identification_iv"
-                android:layout_width="35dp"
-                android:layout_height="35dp"
-                android:src="@drawable/icon_face_identification" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="18dp"
-                android:layout_toRightOf="@id/face_identification_iv"
-                android:text="人脸识别"
-                android:textColor="@color/white_main"
-                android:textSize="24sp"
-                android:textStyle="bold" />
-
-        </RelativeLayout>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!--右边的布局-->
-    <FrameLayout
-        android:id="@+id/right_container"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="52">
-
-        <!--人脸识别页面-->
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/face_input_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone">
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:cardBackgroundColor="@android:color/transparent"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent">
-
-                <!-- 相机预览 View，比如 CameraX 的 PreviewView -->
-                <androidx.camera.view.PreviewView
-                    android:id="@+id/camera_preview"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
-            </com.google.android.material.card.MaterialCardView>
-
-
-<!--                        <androidx.camera.view.PreviewView
-                            android:id="@+id/camera_preview"
-                            android:layout_width="300dp"
-                            android:layout_height="300dp"
-                            app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />-->
-
-            <com.meeting.accesscontrol.view.FaceScanMaskView
-                android:id="@+id/mask_view"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
+                android:id="@+id/meeting_room_iv"
+                android:layout_width="28dp"
+                android:layout_height="27dp"
+                android:layout_marginStart="31dp"
+                android:layout_marginTop="29dp"
+                android:src="@drawable/icon_meeting_blue"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
-                android:id="@+id/cancel_button"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginHorizontal="85dp"
-                android:layout_marginBottom="62dp"
-                android:background="@drawable/cancel_bg_selector"
-                android:clickable="true"
-                android:gravity="center"
-                android:text="取消"
-                android:textColor="@color/blue_02"
-                android:textSize="24sp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
-
-            <TextView
-                android:id="@+id/input_face_title"
+                android:id="@+id/meeting_room_tv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="30dp"
-                android:text="人脸识别"
-                android:textColor="@color/white_main"
-                android:textSize="36sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
-                android:id="@+id/input_hint"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginLeft="14dp"
                 android:text=""
-                android:textColor="@color/white_main"
-                android:textSize="16sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/input_face_title" />
+                android:textColor="@color/blue_main"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:layout_constraintLeft_toRightOf="@id/meeting_room_iv"
+                app:layout_constraintTop_toTopOf="@id/meeting_room_iv"
+                tools:text="003 号会议室" />
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <!--预定会议页面-->
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/order_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/container_bg_white_16"
-            android:paddingBottom="20dp"
-            android:visibility="visible">
-
-            <TextView
-                android:id="@+id/order_list_title_tv"
+            <LinearLayout
+                android:id="@+id/office_content_ll"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginVertical="30dp"
-                android:gravity="center"
-                android:text="今日预约会议"
-                android:textColor="@color/blue_main"
-                android:textSize="36sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <ListView
-                android:id="@+id/order_list"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_marginHorizontal="4dp"
-                android:layout_marginVertical="20dp"
-                android:background="@null"
-                android:divider="@android:color/transparent"
-                android:dividerHeight="16dp"
-                android:listSelector="@android:color/transparent"
-                android:overScrollMode="never"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
                 android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/order_list_title_tv" />
-
-
-            <!--无预约会议展示-->
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/null_order_rl"
-                android:layout_width="300dp"
-                android:layout_height="300dp"
-                android:background="@drawable/container_bg_gray_12"
-                android:visibility="visible"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
+                <TextView
+                    android:id="@+id/time_tv_office"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textColor="@color/black_main"
+                    android:textSize="50sp"
+                    android:textStyle="normal"
+                    tools:text="15 : 50" />
+
+
+                <TextView
+                    android:id="@+id/date_tv_office"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text=""
+                    android:textColor="@color/gray_main"
+                    android:textSize="20sp" />
+
+                <RelativeLayout
+                    android:id="@+id/face_identification_office_rl"
+                    android:layout_width="550dp"
+                    android:layout_height="80dp"
+                    android:layout_marginTop="60dp"
+                    android:background="@drawable/face_identification_selector"
+                    android:clickable="true"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:id="@+id/face_identification_office_iv"
+                        android:layout_width="35dp"
+                        android:layout_height="35dp"
+                        android:src="@drawable/icon_face_identification" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="18dp"
+                        android:layout_toRightOf="@id/face_identification_office_iv"
+                        android:text="人脸识别"
+                        android:textColor="@color/white_main"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                </RelativeLayout>
+
+            </LinearLayout>
+
+
+            <TextView
+                android:id="@+id/time_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="25dp"
+                android:text=""
+                android:textColor="@color/black_main"
+                android:textSize="50sp"
+                android:textStyle="normal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/meeting_room_iv"
+                tools:text="15 : 50" />
+
+            <TextView
+                android:id="@+id/date_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text=""
+                android:textColor="@color/gray_main"
+                android:textSize="20sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/time_tv" />
+
+            <TextView
+                android:id="@+id/meeting_statues_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="25dp"
+                android:text=""
+                android:textColor="@color/blue_main"
+                android:textSize="60sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/date_tv"
+                tools:text="会议进行中" />
+
+            <LinearLayout
+                android:id="@+id/meeting_content_ll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="55dp"
+                android:layout_marginVertical="30dp"
+                android:background="@drawable/container_bg_gray_12"
+                android:orientation="vertical"
+                android:paddingHorizontal="30dp"
+                android:paddingVertical="20dp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/meeting_statues_tv">
+
+                <TextView
+                    android:id="@+id/meeting_title_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/black_main"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    tools:text="会议主题： 关于公司年终总结会议" />
+
+                <TextView
+                    android:id="@+id/meeting_time_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:textColor="@color/gray_main"
+                    android:textSize="20sp"
+                    tools:text="会议时间：2025-07-22 11:00-12:00" />
+
+                <TextView
+                    android:id="@+id/meeting_initiator_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:textColor="@color/gray_main"
+                    android:textSize="20sp"
+                    tools:text="发起人：李总" />
+
+                <TextView
+                    android:id="@+id/meeting_participant_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:ellipsize="end"
+                    android:lines="1"
+                    android:textColor="@color/gray_main"
+                    android:textSize="20sp"
+                    tools:text="参会人员：李总、陈总、张总、徐总、朱总" />
+
+            </LinearLayout>
+
+            <RelativeLayout
+                android:id="@+id/face_identification_rl"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_marginHorizontal="55dp"
+                android:layout_marginVertical="30dp"
+                android:background="@drawable/face_identification_selector"
+                android:clickable="true"
+                android:gravity="center"
+                android:visibility="gone"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/meeting_content_ll">
+
                 <ImageView
-                    android:id="@+id/meeting_gray_iv"
-                    android:layout_width="71dp"
-                    android:layout_height="69dp"
-                    android:layout_centerInParent="true"
-                    android:layout_marginTop="102dp"
-                    android:src="@drawable/icon_meeting_gray"
+                    android:id="@+id/face_identification_iv"
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
+                    android:src="@drawable/icon_face_identification" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="18dp"
+                    android:layout_toRightOf="@id/face_identification_iv"
+                    android:text="人脸识别"
+                    android:textColor="@color/white_main"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+            </RelativeLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!--右边的布局-->
+        <FrameLayout
+            android:id="@+id/right_container"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="20dp"
+            android:layout_weight="52"
+            android:visibility="gone">
+
+            <!--人脸识别页面-->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/face_input_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:cardBackgroundColor="@android:color/transparent"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <!-- 相机预览 View，比如 CameraX 的 PreviewView -->
+                    <androidx.camera.view.PreviewView
+                        android:id="@+id/camera_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                </com.google.android.material.card.MaterialCardView>
+
+
+                <!--                        <androidx.camera.view.PreviewView
+                                            android:id="@+id/camera_preview"
+                                            android:layout_width="300dp"
+                                            android:layout_height="300dp"
+                                            app:layout_constraintBottom_toBottomOf="parent"
+                                            app:layout_constraintEnd_toEndOf="parent"
+                                            app:layout_constraintStart_toStartOf="parent"
+                                            app:layout_constraintTop_toTopOf="parent" />-->
+
+                <com.meeting.accesscontrol.view.FaceScanMaskView
+                    android:id="@+id/mask_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
+                    android:id="@+id/cancel_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginHorizontal="85dp"
+                    android:layout_marginBottom="62dp"
+                    android:background="@drawable/cancel_bg_selector"
+                    android:clickable="true"
+                    android:gravity="center"
+                    android:text="取消"
+                    android:textColor="@color/blue_02"
+                    android:textSize="24sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <TextView
+                    android:id="@+id/input_face_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/meeting_gray_iv"
-                    android:layout_marginTop="16dp"
-                    android:text="暂无预约会议"
-                    android:textColor="@color/gray_main"
-                    android:textSize="18sp"
+                    android:layout_marginTop="30dp"
+                    android:text="人脸识别"
+                    android:textColor="@color/white_main"
+                    android:textSize="36sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/meeting_gray_iv" />
+                    app:layout_constraintTop_toTopOf="parent" />
 
+                <TextView
+                    android:id="@+id/input_hint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text=""
+                    android:textColor="@color/white_main"
+                    android:textSize="16sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/input_face_title" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+            <!--预定会议页面-->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/order_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/container_bg_white_16"
+                android:paddingBottom="20dp"
+                android:visibility="visible">
 
-    </FrameLayout>
+                <TextView
+                    android:id="@+id/order_list_title_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="30dp"
+                    android:gravity="center"
+                    android:text="今日预约会议"
+                    android:textColor="@color/blue_main"
+                    android:textSize="36sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-</LinearLayout>
+                <ListView
+                    android:id="@+id/order_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:layout_marginVertical="20dp"
+                    android:background="@null"
+                    android:divider="@android:color/transparent"
+                    android:dividerHeight="16dp"
+                    android:listSelector="@android:color/transparent"
+                    android:overScrollMode="never"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/order_list_title_tv" />
+
+
+                <!--无预约会议展示-->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/null_order_rl"
+                    android:layout_width="300dp"
+                    android:layout_height="300dp"
+                    android:background="@drawable/container_bg_gray_12"
+                    android:visibility="visible"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <ImageView
+                        android:id="@+id/meeting_gray_iv"
+                        android:layout_width="71dp"
+                        android:layout_height="69dp"
+                        android:layout_centerInParent="true"
+                        android:layout_marginTop="102dp"
+                        android:src="@drawable/icon_meeting_gray"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/meeting_gray_iv"
+                        android:layout_marginTop="16dp"
+                        android:text="暂无预约会议"
+                        android:textColor="@color/gray_main"
+                        android:textSize="18sp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/meeting_gray_iv" />
+
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/loading_view"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_centerInParent="true"
+        app:lottie_fileName="loading.json"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true" />
+
+</RelativeLayout>

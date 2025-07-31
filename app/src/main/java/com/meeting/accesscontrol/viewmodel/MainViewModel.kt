@@ -15,10 +15,14 @@ import com.meeting.accesscontrol.tools.CommonUtils
 import com.meeting.accesscontrol.tools.ImageUploadHelper
 import com.meeting.accesscontrol.tools.LogUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Random
 
 class MainViewModel(private val apiService: ApiService) : ViewModel() {
+
+    private val _typeResult = MutableLiveData<Result<Int>>()
+    val typeResult: LiveData<Result<Int>> = _typeResult
 
     private val _meetingResult = MutableLiveData<Result<MeetingRoom>>()
     val meetingResult: LiveData<Result<MeetingRoom>> = _meetingResult
@@ -34,6 +38,18 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
 
     //图片上传辅助工具
     private val imageUploadHelper = ImageUploadHelper()
+
+    /**
+     * 请求平板对应的房间类型:
+     * 1    会议室
+     * 2    办公室
+     */
+    fun requestRoomType(deviceID: String) {
+        viewModelScope.launch(Dispatchers.Default) {
+            delay(2000)
+            _typeResult.postValue(Result.success(1))
+        }
+    }
 
     /**
      * 获取会议信息

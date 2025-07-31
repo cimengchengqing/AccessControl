@@ -76,4 +76,7 @@ dependencies {
     // Google ML Kit 人脸检测库
     implementation("com.google.mlkit:face-detection:16.1.6")
 //    implementation(libs.play.services.mlkit.face.detection)
+
+    //动画库
+    implementation("com.airbnb.android:lottie:6.1.0")
 }

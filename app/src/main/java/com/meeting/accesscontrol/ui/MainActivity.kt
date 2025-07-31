@@ -19,10 +19,12 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.R
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.airbnb.lottie.LottieAnimationView
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -52,6 +54,7 @@ class MainActivity : AppCompatActivity() {
 
     private var _binding: ActivityMainBinding? = null
     private val binding get() = _binding!!
+    private var roomType = 0
 
     private var orderMeetings = mutableListOf<Meeting>()    //预约的会议列表（除去当前正在进行的会议）
     private var currMeeting: Meeting? = null
@@ -112,6 +115,14 @@ class MainActivity : AppCompatActivity() {
         initData()
         initViews()
         initEvents()
+        requestData()
+    }
+
+    /**
+     * 请求初始数据
+     */
+    private fun requestData() {
+        mViewModel.requestRoomType(deviceID)
     }
 
     /**
@@ -156,6 +167,19 @@ class MainActivity : AppCompatActivity() {
             startFaceAnalysis()
         }
 
+        binding.faceIdentificationOfficeRl.setOnClickListener {
+            startFaceAnalysis()
+        }
+
+        mViewModel.typeResult.observe(this) { result ->
+            result.onSuccess { type ->
+                roomType = type
+                updateUI(roomType)
+            }.onFailure { e ->
+                mToast.showError(applicationContext, "未知的房间类型")
+            }
+        }
+
         mViewModel.meetingResult.observe(this) { result ->
             result.onSuccess { bean ->
                 LogUtils.d(TAG, "请求会议信息成功 ")
@@ -163,6 +187,7 @@ class MainActivity : AppCompatActivity() {
             }.onFailure { e ->
                 mToast.showError(applicationContext, "获取会议信息失败")
             }
+            hideLoadingView()
         }
 
         mViewModel.uploadResult.observe(this) { result ->
@@ -209,6 +234,45 @@ class MainActivity : AppCompatActivity() {
             stopFaceAnalysis()
             isCapturing = false
         }
+    }
+
+    /**
+     * 更新UI
+     */
+    private fun updateUI(type: Int) {
+        if (roomType == 1) {
+            //会议室类型
+            binding.officeContentLl.visibility = View.GONE
+            binding.rightContainer.visibility = View.VISIBLE
+            binding.faceInputContainer.visibility = View.GONE
+            binding.nullOrderRl.visibility = View.VISIBLE
+
+            binding.rightContainer.visibility = View.VISIBLE
+            binding.timeTv.visibility = View.VISIBLE
+            binding.dateTv.visibility = View.VISIBLE
+            binding.faceIdentificationRl.visibility = View.GONE
+            binding.meetingContentLl.visibility = View.GONE
+            binding.meetingStatuesTv.visibility = View.VISIBLE
+
+            //会议室类型才请求会议信息
+            mViewModel.requestMeetingInfo(deviceID)
+        } else {
+            //办公室类型
+            binding.officeContentLl.visibility = View.VISIBLE
+            binding.rightContainer.visibility = View.GONE
+            binding.faceInputContainer.visibility = View.VISIBLE
+            binding.nullOrderRl.visibility = View.GONE
+
+            binding.rightContainer.visibility = View.GONE
+            binding.timeTv.visibility = View.GONE
+            binding.dateTv.visibility = View.GONE
+            binding.faceIdentificationRl.visibility = View.GONE
+            binding.meetingContentLl.visibility = View.GONE
+            binding.meetingStatuesTv.visibility = View.GONE
+
+            hideLoadingView()
+        }
+        binding.rootView.visibility = View.VISIBLE
     }
 
     /**根据所有的会议信息更新当前会议状态
@@ -336,7 +400,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         LogUtils.d(TAG, "onResume: ")
-        mViewModel.requestMeetingInfo(deviceID)
         checkAutoStartPermission()
     }
 
@@ -354,11 +417,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
+        showLoadingView()
+
         maskView = binding.maskView
         statusTextView = binding.inputHint
         previewView = binding.cameraPreview
 
         initCamera()
+
+        // 主页的展示需要根据请求接口的结果（办公室还是会议室）来进展差异化展示
     }
 
     private fun initData() {
@@ -368,12 +435,18 @@ class MainActivity : AppCompatActivity() {
         timeRunnable = object : Runnable {
             override fun run() {
                 val (time, date) = getCurrentTimeAndDate()
-                val currTime = binding.timeTv.text
-                if (!currTime.equals("") && time != currTime) {
-                    mViewModel.requestMeetingInfo(deviceID)
+                if (roomType == 1) {
+                    val currTime = binding.timeTv.text
+                    if (!currTime.equals("") && time != currTime) {
+                        mViewModel.requestMeetingInfo(deviceID)
+                    }
+                    binding.timeTv.text = time
+                    binding.dateTv.text = date
+                } else {
+                    binding.timeTvOffice.text = time
+                    binding.dateTvOffice.text = date
                 }
-                binding.timeTv.text = time
-                binding.dateTv.text = date
+
                 handler.postDelayed(this, 1000) // 每秒刷新一次
             }
         }
@@ -450,6 +523,12 @@ class MainActivity : AppCompatActivity() {
                     mToast.showError(this, "相机绑定失败")
                 }
             }
+
+            //办公室类型需要显示右容器
+            if (roomType == 2) {
+                binding.rightContainer.visibility = View.VISIBLE
+            }
+
         } else {
             mToast.showError(applicationContext, "相机未准备好")
         }
@@ -461,8 +540,12 @@ class MainActivity : AppCompatActivity() {
     private fun stopFaceAnalysis() {
         cameraProvider.unbindAll()
         analysisActive = false
-        binding.faceInputContainer.visibility = View.GONE
-        binding.orderContainer.visibility = View.VISIBLE
+        if (roomType == 1) {
+            binding.faceInputContainer.visibility = View.GONE
+            binding.orderContainer.visibility = View.VISIBLE
+        } else {
+            binding.rightContainer.visibility = View.GONE
+        }
     }
 
     /**
@@ -638,6 +721,23 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             statusTextView.text = text
         }
+    }
+
+    /**
+     * 加载框显示
+     */
+    fun showLoadingView() {
+        binding.loadingView.visibility = View.VISIBLE
+        binding.loadingView.playAnimation()
+    }
+
+    /**
+     * 隐藏
+     */
+    fun hideLoadingView() {
+        binding.loadingView.visibility = View.GONE
+        binding.loadingView.cancelAnimation()
+        binding.loadingView.progress = 0f
     }
 
     private fun imageProxyToBitmap(image: ImageProxy): Bitmap {
