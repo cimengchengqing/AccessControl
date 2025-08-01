@@ -1,13 +1,15 @@
 package com.meeting.accesscontrol.viewmodel
 
 import android.graphics.Bitmap
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.meeting.accesscontrol.bean.JudgeRequest
 import com.meeting.accesscontrol.bean.MeetingRoom
+import com.meeting.accesscontrol.bean.RoomInfo
+import com.meeting.accesscontrol.bean.TokenNewBean
+import com.meeting.accesscontrol.bean.TokenRefreshBean
 import com.meeting.accesscontrol.net.ApiService
 import com.meeting.accesscontrol.net.ApiService.DoorStatusRequest
 import com.meeting.accesscontrol.tools.AppConfig
@@ -15,14 +17,20 @@ import com.meeting.accesscontrol.tools.CommonUtils
 import com.meeting.accesscontrol.tools.ImageUploadHelper
 import com.meeting.accesscontrol.tools.LogUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.ConnectException
 import java.util.Random
 
 class MainViewModel(private val apiService: ApiService) : ViewModel() {
 
-    private val _typeResult = MutableLiveData<Result<Int>>()
-    val typeResult: LiveData<Result<Int>> = _typeResult
+    private val _typeResult = MutableLiveData<Result<RoomInfo>>()
+    val typeResult: LiveData<Result<RoomInfo>> = _typeResult
+
+    private val _tokenResult = MutableLiveData<Result<TokenNewBean>>()
+    val tokenResult: LiveData<Result<TokenNewBean>> = _tokenResult
+
+    private val _refreshResult = MutableLiveData<Result<TokenRefreshBean>>()
+    val refreshResult: LiveData<Result<TokenRefreshBean>> = _refreshResult
 
     private val _meetingResult = MutableLiveData<Result<MeetingRoom>>()
     val meetingResult: LiveData<Result<MeetingRoom>> = _meetingResult
@@ -45,9 +53,33 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
      * 2    办公室
      */
     fun requestRoomType(deviceID: String) {
-        viewModelScope.launch(Dispatchers.Default) {
-            delay(2000)
-            _typeResult.postValue(Result.success(1))
+        val nonce = Random().nextInt(10000).toString()
+        val timestamp = (System.currentTimeMillis()).toString()
+        val sign = CommonUtils.md5(AppConfig.SECRET_KEY + timestamp + nonce)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = apiService.verifyRoomType(
+                    nonce,
+                    timestamp,
+                    AppConfig.APP_ID,
+                    sign,
+                    ApiService.DeviceInfo(deviceID)
+                )
+                if (response.code() == 200 && response.body() != null) {
+                    // 处理数据
+                    _typeResult.postValue(Result.success(response.body()!!.data))
+                } else {
+                    _typeResult.postValue(Result.failure(Exception("请求出错")))
+                }
+            } catch (e: ConnectException) {
+                // 捕获连接异常:ml-citation{ref="8" data="citationList"}
+                LogUtils.d("主页", "网络不可达")
+                _typeResult.postValue(Result.failure(Exception("网络连接失败")))
+            } catch (e: Exception) {
+                // 兜底处理
+                LogUtils.d("主页", "请求出错")
+                _typeResult.postValue(Result.failure(Exception("请求出错")))
+            }
         }
     }
 
@@ -111,15 +143,15 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
     }
 
     /**
-     * 与会人员信息校验
+     * 人员信息校验
      */
-    fun verifyUserByMeeting(userID: Long, meetingID: Long) {
+    fun verifyUserByID(userID: Long, meetingID: Long, deviceID: String) {
         val nonce = Random().nextInt(10000).toString()
         val timestamp = (System.currentTimeMillis()).toString()
         val sign = CommonUtils.md5(AppConfig.SECRET_KEY + timestamp + nonce)
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val request = JudgeRequest(userID, meetingID)
+                val request = JudgeRequest(userID, meetingID, deviceID)
                 val response =
                     apiService.accessControlJudge(nonce, timestamp, AppConfig.APP_ID, sign, request)
                 if (response.isSuccessful) {
@@ -151,12 +183,17 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
      * 4 关
      * 5 正常
      */
-    fun settingDoorStatus(channel_ID: String, door_status: Int) {
+    fun settingDoorStatus(token: String, channel_ID: String, door_status: Int = 4) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val ids = listOf<String>(channel_ID)
                 val request = DoorStatusRequest(ids, door_status)
-                val response = apiService.setDoorStatus(request)
+                val response = apiService.setDoorStatus(
+                    token,
+                    "usercode:${AppConfig.API_ACCOUNT}",
+                    "usercode=${AppConfig.API_ACCOUNT}",
+                    request
+                )
                 if (response.isSuccessful) {
                     val body = response.body()
                     body?.let {
@@ -168,6 +205,54 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
             } catch (e: Exception) {
                 LogUtils.e("主页", "verifyUserByMeeting: ${e.message}")
                 _doorResult.postValue(Result.failure(Exception("${e.message}")))
+            }
+        }
+    }
+
+    /**
+     * 获取门禁认证Token
+     */
+    fun getAccessControlToken() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = apiService.getToken()
+                if (response.isSuccessful) {
+                    if (response.code() == 200 && response.body() != null) {
+                        _tokenResult.postValue(Result.success(response.body()!!))
+                    } else {
+                        _tokenResult.postValue(Result.failure(Exception("请求token出错")))
+                    }
+                } else {
+                    _tokenResult.postValue(Result.failure(Exception("请求token出错")))
+                }
+            } catch (e: Exception) {
+                // 兜底处理
+                LogUtils.d("主页", "请求token出错")
+                _tokenResult.postValue(Result.failure(Exception("请求token出错")))
+            }
+        }
+    }
+
+    /**
+     * 刷新门禁认证Token
+     */
+    fun refreshControlToken(refreshToken: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = apiService.refreshToken(refresh_token = refreshToken)
+                if (response.isSuccessful) {
+                    if (response.code() == 200 && response.body() != null) {
+                        _refreshResult.postValue(Result.success(response.body()!!))
+                    } else {
+                        _refreshResult.postValue(Result.failure(Exception("刷新token出错")))
+                    }
+                } else {
+                    _refreshResult.postValue(Result.failure(Exception("刷新token出错")))
+                }
+            } catch (e: Exception) {
+                // 兜底处理
+                LogUtils.d("主页", "刷新token出错")
+                _refreshResult.postValue(Result.failure(Exception("刷新token出错")))
             }
         }
     }

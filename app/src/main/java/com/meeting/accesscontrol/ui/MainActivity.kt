@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -19,12 +20,10 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
-import androidx.camera.core.R
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.airbnb.lottie.LottieAnimationView
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -34,9 +33,11 @@ import com.meeting.accesscontrol.adapter.MeetingListAdapter
 import com.meeting.accesscontrol.aotu_launch.AutoStartPermissionHelper
 import com.meeting.accesscontrol.bean.Meeting
 import com.meeting.accesscontrol.bean.MeetingRoom
+import com.meeting.accesscontrol.bean.RoomInfo
 import com.meeting.accesscontrol.databinding.ActivityMainBinding
 import com.meeting.accesscontrol.net.ApiService
 import com.meeting.accesscontrol.net.NetworkManager
+import com.meeting.accesscontrol.tools.AppSPUtils
 import com.meeting.accesscontrol.tools.LogUtils
 import com.meeting.accesscontrol.tools.TimeFormatter
 import com.meeting.accesscontrol.view.CustomToast
@@ -55,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private var _binding: ActivityMainBinding? = null
     private val binding get() = _binding!!
     private var roomType = 0
+    private var roomBean: RoomInfo? = null
 
     private var orderMeetings = mutableListOf<Meeting>()    //预约的会议列表（除去当前正在进行的会议）
     private var currMeeting: Meeting? = null
@@ -95,6 +97,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var autoStartPermissionHelper: AutoStartPermissionHelper
     private val mToast: CustomToast = CustomToast.getInstance()
 
+    private val spUtils: AppSPUtils by lazy {
+        AppSPUtils.getInstance(applicationContext)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         LogUtils.d(TAG, "onCreate: ")
@@ -123,6 +129,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun requestData() {
         mViewModel.requestRoomType(deviceID)
+//        mViewModel.getAccessControlToken()
     }
 
     /**
@@ -171,12 +178,36 @@ class MainActivity : AppCompatActivity() {
             startFaceAnalysis()
         }
 
+        mViewModel.tokenResult.observe(this) { result ->
+            result.onSuccess { bean ->
+                spUtils.saveTokens(bean.access_token, bean.refresh_token, bean.expires_in)
+                roomDoorId?.let {
+                    mViewModel.settingDoorStatus(bean.access_token, it)
+                }
+            }.onFailure { e ->
+                LogUtils.d(TAG, "未成功获取授权token")
+            }
+        }
+
+        mViewModel.refreshResult.observe(this) { result ->
+            result.onSuccess { bean ->
+                spUtils.saveTokens(bean.access_token, bean.expires_in)
+                roomDoorId?.let {
+                    mViewModel.settingDoorStatus(bean.access_token, it)
+                }
+            }.onFailure { e ->
+                LogUtils.d(TAG, "未成功刷新授权token")
+            }
+        }
+
         mViewModel.typeResult.observe(this) { result ->
-            result.onSuccess { type ->
-                roomType = type
-                updateUI(roomType)
+            result.onSuccess { bean ->
+                roomBean = bean
+                roomType = roomBean!!.code
+                updateUI(roomBean!!)
             }.onFailure { e ->
                 mToast.showError(applicationContext, "未知的房间类型")
+                hideLoadingView()
             }
         }
 
@@ -194,13 +225,18 @@ class MainActivity : AppCompatActivity() {
             result.onSuccess { id ->
                 // 人脸识别完成，拿到用户id和会议id，校验是否能够参加会议
                 try {
-                    currMeeting?.let {
-                        mViewModel.verifyUserByMeeting(id.toLong(), it.meetingId.toLong())
-                    } ?: run {
-                        mToast.showError(applicationContext, "没有进行中的会议")
-                        stopFaceAnalysis()
-                        isCapturing = false
+                    if (roomType == 1) {
+                        currMeeting?.let {
+                            mViewModel.verifyUserByID(id.toLong(), it.meetingId.toLong(), "")
+                        } ?: run {
+                            mToast.showError(applicationContext, "没有进行中的会议")
+                            stopFaceAnalysis()
+                            isCapturing = false
+                        }
+                    } else {
+                        mViewModel.verifyUserByID(id.toLong(), 0L, deviceID)
                     }
+
                 } catch (e: Exception) {
                     mToast.showError(applicationContext, "请求出错")
                     isCapturing = false
@@ -212,11 +248,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         mViewModel.recognitionResult.observe(this) { result ->
-            result.onSuccess { id ->
-                //识别成功，请求打开门禁
-                roomDoorId?.let {
-                    mViewModel.settingDoorStatus(it, 3)
-                }
+            result.onSuccess {
+                //识别成功，校验token打开门禁
+                checkAccessToken()
             }.onFailure { e ->
                 mToast.showError(applicationContext, "人脸识别失败")
             }
@@ -237,9 +271,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * 检查门禁授权token
+     */
+    private fun checkAccessToken() {
+        LogUtils.d(TAG, "checkAccessToken: ")
+        roomDoorId?.let {
+            if (spUtils.isTokenExpired()) {//Token过期则需要刷新
+                if (spUtils.refreshToken.isNullOrEmpty() || spUtils.isRefreshTokenExpired()) {
+                    //直接请求新的
+                    mViewModel.getAccessControlToken()
+                } else {
+                    //请求刷新
+                    mViewModel.refreshControlToken(spUtils.refreshToken!!)
+                }
+            } else {
+                if (spUtils.accessToken == null) {
+                    mViewModel.getAccessControlToken()
+                } else {
+                    mViewModel.settingDoorStatus(spUtils.accessToken!!, it)
+                }
+            }
+        }
+    }
+
+    /**
      * 更新UI
      */
-    private fun updateUI(type: Int) {
+    private fun updateUI(info: RoomInfo) {
+        info?.let {
+            binding.meetingRoomTv.text = it.desc
+            roomDoorId = it.guardId
+        }
+
         if (roomType == 1) {
             //会议室类型
             binding.officeContentLl.visibility = View.GONE
@@ -281,8 +344,6 @@ class MainActivity : AppCompatActivity() {
      */
     private fun updateMeetingStatus(bean: MeetingRoom) {
         LogUtils.d(TAG, "updateMeetingStatus: ")
-
-        roomDoorId = bean.deviceId
 
         runOnUiThread {
             bean.roomName?.let {

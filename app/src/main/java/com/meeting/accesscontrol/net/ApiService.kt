@@ -2,6 +2,10 @@ package com.meeting.accesscontrol.net
 
 import com.meeting.accesscontrol.bean.JudgeRequest
 import com.meeting.accesscontrol.bean.MeetingRoom
+import com.meeting.accesscontrol.bean.RoomInfo
+import com.meeting.accesscontrol.bean.TokenNewBean
+import com.meeting.accesscontrol.bean.TokenRefreshBean
+import com.meeting.accesscontrol.tools.AppConfig
 import com.meeting.accesscontrol.tools.AppConfig.Companion.APP_ID
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
@@ -21,6 +25,41 @@ import retrofit2.http.Query
 interface ApiService {
 
     /**
+     * 请求房间类型
+     */
+    @POST("openapi/judgeRoom")
+    suspend fun verifyRoomType(
+        @Header("nonce") nonce: String,
+        @Header("timestamp") timestamp: String,
+        @Header("appid") appid: String = APP_ID,
+        @Header("sign") sign: String,
+        @Body Info: DeviceInfo        // 平板信息
+    ): Response<AppResponse<RoomInfo>>
+
+    /**
+     * 请求门禁访问的 token
+     */
+    @GET("http://mj.frps.dearloser.cn:18080/sso/oauth2.0/accessToken")
+    suspend fun getToken(
+        @Query("grant_type") grant_type: String = "client_credentials",
+        @Query("client_id") client_id: String = AppConfig.API_ACCOUNT,
+        @Query("client_secret") client_secret: String = AppConfig.API_PASSWORD,
+        @Query("format") format: String = "json"
+    ): Response<TokenNewBean>
+
+    /**
+     * 请求刷新门禁 token
+     */
+    @GET("http://mj.frps.dearloser.cn:18080/sso/oauth2.0/accessToken")
+    suspend fun refreshToken(
+        @Query("grant_type") grant_type: String = "refresh_token",
+        @Query("client_id") client_id: String = AppConfig.API_ACCOUNT,
+        @Query("client_secret") client_secret: String = AppConfig.API_PASSWORD,
+        @Query("refresh_token") refresh_token: String,
+        @Query("format") format: String = "json"
+    ): Response<TokenRefreshBean>
+
+    /**
      * 请求会议列表信息
      */
     @GET("openapi/meeting")
@@ -36,7 +75,7 @@ interface ApiService {
      * 人脸识别
      */
     @Multipart
-    @POST("http://39.105.116.125:9562/api/v1/recognition/recognize")
+    @POST("http://39.105.116.125:9561/api/v1/recognition/recognize")
     suspend fun uploadFaceInfo(
         @Header("x-api-key") apiKey: String,
         @Part file: MultipartBody.Part        // 人脸图片
@@ -60,8 +99,14 @@ interface ApiService {
      * @param request 门状态请求参数
      * @return 响应结果
      */
-    @PUT("http://172.40.10.20:11125/api/mg/v3/egs/control/door-status")
-    suspend fun setDoorStatus(@Body request: DoorStatusRequest): Response<ResponseBody>
+//    @PUT("http://172.40.10.20:11125/api/mg/v3/egs/control/door-status")
+    @PUT("http://mj.frps.dearloser.cn:18080/api/mg/v3/egs/control/door-status")
+    suspend fun setDoorStatus(
+        @Header("Authorization") Authorization: String,
+        @Header("User") User: String,
+        @Header("Cookie") Cookie: String,
+        @Body request: DoorStatusRequest
+    ): Response<ResponseBody>
 
     /**
      * 请求响应结果
@@ -78,6 +123,13 @@ interface ApiService {
     data class DoorStatusRequest(
         val channel_nos: List<String>,
         val door_status: Int
+    )
+
+    /**
+     * 房间类型请求
+     */
+    data class DeviceInfo(
+        val tabletId: String
     )
 
     /**
