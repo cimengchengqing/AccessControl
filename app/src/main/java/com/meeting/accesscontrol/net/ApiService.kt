@@ -1,5 +1,6 @@
 package com.meeting.accesscontrol.net
 
+import com.meeting.accesscontrol.bean.EntranceGuardInfo
 import com.meeting.accesscontrol.bean.JudgeRequest
 import com.meeting.accesscontrol.bean.MeetingRoom
 import com.meeting.accesscontrol.bean.RoomInfo
@@ -8,7 +9,6 @@ import com.meeting.accesscontrol.bean.TokenRefreshBean
 import com.meeting.accesscontrol.tools.AppConfig
 import com.meeting.accesscontrol.tools.AppConfig.Companion.APP_ID
 import okhttp3.MultipartBody
-import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -106,7 +106,7 @@ interface ApiService {
         @Header("User") User: String,
         @Header("Cookie") Cookie: String,
         @Body request: DoorStatusRequest
-    ): Response<ResponseBody>
+    ): Response<DoorResponse<List<EntranceGuardInfo>>>
 
     /**
      * 请求响应结果
@@ -123,6 +123,15 @@ interface ApiService {
     data class DoorStatusRequest(
         val channel_nos: List<String>,
         val door_status: Int
+    )
+
+    /**
+     * 门禁状态返回信息类
+     */
+    data class DoorResponse<T>(
+        val error_code: String,
+        val message: String,
+        val data: T
     )
 
     /**

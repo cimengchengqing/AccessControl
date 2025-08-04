@@ -74,7 +74,7 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
             } catch (e: ConnectException) {
                 // 捕获连接异常:ml-citation{ref="8" data="citationList"}
                 LogUtils.d("主页", "网络不可达")
-                _typeResult.postValue(Result.failure(Exception("网络连接失败")))
+                _typeResult.postValue(Result.failure(Exception("网络访问失败")))
             } catch (e: Exception) {
                 // 兜底处理
                 LogUtils.d("主页", "请求出错")
@@ -183,7 +183,7 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
      * 4 关
      * 5 正常
      */
-    fun settingDoorStatus(token: String, channel_ID: String, door_status: Int = 4) {
+    fun settingDoorStatus(token: String, channel_ID: String, door_status: Int = 3) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val ids = listOf<String>(channel_ID)
@@ -196,8 +196,11 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                 )
                 if (response.isSuccessful) {
                     val body = response.body()
-                    body?.let {
-                        _doorResult.postValue(Result.success("请求成功"))
+                    body?.error_code?.let {
+                        when (it.equals("0000000000")) {
+                            true -> _doorResult.postValue(Result.success("请求成功"))
+                            else -> _doorResult.postValue(Result.failure(Exception("请求出错")))
+                        }
                     } ?: _doorResult.postValue(Result.failure(Exception("请求出错")))
                 } else {
                     _doorResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))

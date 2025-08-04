@@ -41,6 +41,7 @@ android {
 
 
 val camerax_version = "1.3.1"
+val work_version = "2.9.0"
 
 dependencies {
 
@@ -79,4 +80,6 @@ dependencies {
 
     //动画库
     implementation("com.airbnb.android:lottie:6.1.0")
+
+    implementation("androidx.work:work-runtime-ktx:$work_version")
 }

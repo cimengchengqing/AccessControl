@@ -2,6 +2,7 @@ package com.meeting.accesscontrol.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -9,7 +10,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -30,7 +30,6 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.meeting.accesscontrol.adapter.MeetingListAdapter
-import com.meeting.accesscontrol.aotu_launch.AutoStartPermissionHelper
 import com.meeting.accesscontrol.bean.Meeting
 import com.meeting.accesscontrol.bean.MeetingRoom
 import com.meeting.accesscontrol.bean.RoomInfo
@@ -93,8 +92,8 @@ class MainActivity : AppCompatActivity() {
     private val deviceID: String by lazy {
         Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
     }
+    private var pageInit = false;
 
-    private lateinit var autoStartPermissionHelper: AutoStartPermissionHelper
     private val mToast: CustomToast = CustomToast.getInstance()
 
     private val spUtils: AppSPUtils by lazy {
@@ -125,45 +124,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * 检查是否是从开机自启动启动的
+     */
+    private fun isBootStartup(): Boolean {
+        val sharedPrefs = getSharedPreferences("boot_prefs", Context.MODE_PRIVATE)
+        val lastBootTime = sharedPrefs.getLong("last_boot_time", 0L)
+        val currentTime = System.currentTimeMillis()
+
+        // 如果距离上次开机启动时间小于60秒，认为是开机自启动
+        return currentTime - lastBootTime < 60000
+    }
+
+    /**
      * 请求初始数据
      */
     private fun requestData() {
         mViewModel.requestRoomType(deviceID)
 //        mViewModel.getAccessControlToken()
     }
-
-    /**
-     * 检查自启动权限
-     */
-    private fun checkAutoStartPermission() {
-        try {
-            val hasPermission = autoStartPermissionHelper.checkAutoStartPermission()
-            val message = if (hasPermission) "自启动权限已授予" else "自启动权限未授予"
-            LogUtils.d(TAG, "自启动权限检查结果: $message")
-
-        } catch (e: Exception) {
-            LogUtils.e(TAG, "检查自启动权限失败", e)
-        }
-    }
-
-    /**
-     * 测试开机启动
-     */
-//    private fun testBootStartup() {
-//        try {
-//            LogUtils.d(TAG, "测试开机启动")
-//
-//            // 模拟开机启动
-//            BootStartupManager.getInstance(this).startAppImmediately()
-//
-//            CustomToast.getInstance().showSuccess(this, "测试完成")
-//
-//        } catch (e: Exception) {
-//            LogUtils.e(TAG, "测试开机启动失败", e)
-//            updateStatus("测试失败: ${e.message}")
-//            CustomToast.getInstance().showError(this, "测试失败")
-//        }
-//    }
 
     private fun initEvents() {
         binding.cancelButton.setOnClickListener {
@@ -197,17 +175,25 @@ class MainActivity : AppCompatActivity() {
                 }
             }.onFailure { e ->
                 LogUtils.d(TAG, "未成功刷新授权token")
+                mViewModel.getAccessControlToken()
             }
         }
 
         mViewModel.typeResult.observe(this) { result ->
             result.onSuccess { bean ->
+                binding.lostTv.visibility = View.GONE
                 roomBean = bean
                 roomType = roomBean!!.code
                 updateUI(roomBean!!)
+                pageInit = true
             }.onFailure { e ->
-                mToast.showError(applicationContext, "未知的房间类型")
+                if (e.message?.contains("网络访问失败") == true) {
+                    mToast.showError(applicationContext, "网络访问失败")
+                } else {
+                    binding.lostTv.visibility = View.VISIBLE
+                }
                 hideLoadingView()
+                pageInit = false
             }
         }
 
@@ -298,7 +284,7 @@ class MainActivity : AppCompatActivity() {
      * 更新UI
      */
     private fun updateUI(info: RoomInfo) {
-        info?.let {
+        info.let {
             binding.meetingRoomTv.text = it.desc
             roomDoorId = it.guardId
         }
@@ -361,14 +347,9 @@ class MainActivity : AppCompatActivity() {
 
                 orderMeetings.clear()
 
-                //会议按开始时间升序排序，并过滤掉已过期的会议
-                val currTime = System.currentTimeMillis()
                 val data =
                     bean.meetingInfoList
                         .sortedBy { it.startTime }
-//                        .filter { meeting: Meeting ->
-//                            meeting.endTime > currTime
-//                        }
                 orderMeetings.addAll(data)  //如果第一条会议在20分钟以内开始或者已经开始，不需要展示到“今日预约”
 
                 //获取第一条会议信息进行处理
@@ -461,7 +442,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         LogUtils.d(TAG, "onResume: ")
-        checkAutoStartPermission()
     }
 
     override fun onDestroy() {
@@ -506,6 +486,10 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     binding.timeTvOffice.text = time
                     binding.dateTvOffice.text = date
+                }
+
+                if (!pageInit) {
+                    mViewModel.requestRoomType(deviceID)
                 }
 
                 handler.postDelayed(this, 1000) // 每秒刷新一次
@@ -842,9 +826,9 @@ class MainActivity : AppCompatActivity() {
 }
 
 private fun MainActivity.hideVirtualKey() {
-    val decorView = getWindow().getDecorView()
+    val decorView = window.decorView
     val uiOptions = (View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
-    decorView.setSystemUiVisibility(uiOptions)
+    decorView.systemUiVisibility = uiOptions
 }
