@@ -65,7 +65,7 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                     sign,
                     ApiService.DeviceInfo(deviceID)
                 )
-                if (response.code() == 200 && response.body() != null) {
+                if (response.code() == 200 && response.body() != null && response.body()!!.code == 200) {
                     // 处理数据
                     _typeResult.postValue(Result.success(response.body()!!.data))
                 } else {

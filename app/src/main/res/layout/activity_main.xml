@@ -434,6 +434,7 @@
         android:paddingHorizontal="22dp"
         android:paddingVertical="13dp"
         android:text="@string/door_alter"
+        android:textColor="@color/black_main"
         android:textSize="18sp"
         android:visibility="gone" />
 

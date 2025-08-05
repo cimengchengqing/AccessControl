@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">AccessControl</string>
+    <string name="app_name">会议预定系统</string>
     <string name="door_alter">当前平板设备未查询到绑定的房间与门禁信息，请在管理后台绑定相关信息后重启此设备</string>
 </resources>
