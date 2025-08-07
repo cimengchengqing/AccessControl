@@ -65,7 +65,7 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                     sign,
                     ApiService.DeviceInfo(deviceID)
                 )
-                if (response.code() == 200 && response.body() != null && response.body()!!.code == 200) {
+                if (response.code() == 200 && response.body() != null && response.body()!!.code == 0) {
                     // 处理数据
                     _typeResult.postValue(Result.success(response.body()!!.data))
                 } else {
@@ -167,7 +167,6 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                     _recognitionResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))
                 }
             } catch (e: Exception) {
-                LogUtils.e("主页", "verifyUserByMeeting: ${e.message}")
                 _recognitionResult.postValue(Result.failure(Exception("${e.message}}")))
             }
         }
@@ -199,15 +198,14 @@ class MainViewModel(private val apiService: ApiService) : ViewModel() {
                     body?.error_code?.let {
                         when (it.equals("0000000000")) {
                             true -> _doorResult.postValue(Result.success("请求成功"))
-                            else -> _doorResult.postValue(Result.failure(Exception("请求出错")))
+                            else -> _doorResult.postValue(Result.failure(Exception(body.message)))
                         }
-                    } ?: _doorResult.postValue(Result.failure(Exception("请求出错")))
+                    } ?: _doorResult.postValue(Result.failure(Exception(body?.message)))
                 } else {
-                    _doorResult.postValue(Result.failure(Exception("请求失败: ${response.code()}")))
+                    _doorResult.postValue(Result.failure(Exception("未知原因")))
                 }
             } catch (e: Exception) {
-                LogUtils.e("主页", "verifyUserByMeeting: ${e.message}")
-                _doorResult.postValue(Result.failure(Exception("${e.message}")))
+                _doorResult.postValue(Result.failure(Exception("未知原因")))
             }
         }
     }

@@ -93,6 +93,7 @@ class MainActivity : AppCompatActivity() {
         Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
     }
     private var pageInit = false;
+    private var serviceConnected = false;
 
     private val mToast: CustomToast = CustomToast.getInstance()
 
@@ -188,7 +189,10 @@ class MainActivity : AppCompatActivity() {
                 pageInit = true
             }.onFailure { e ->
                 if (e.message?.contains("网络访问失败") == true) {
-                    mToast.showError(applicationContext, "网络访问失败")
+                    if (!serviceConnected) {
+                        mToast.showError(applicationContext, "请检查网络")
+                        serviceConnected = true
+                    }
                 } else {
                     binding.lostTv.visibility = View.VISIBLE
                 }
@@ -215,8 +219,7 @@ class MainActivity : AppCompatActivity() {
                         currMeeting?.let {
                             mViewModel.verifyUserByID(id.toLong(), it.meetingId.toLong(), "")
                         } ?: run {
-                            mToast.showError(applicationContext, "没有进行中的会议")
-                            stopFaceAnalysis()
+//                            stopFaceAnalysis()
                             isCapturing = false
                         }
                     } else {
@@ -224,7 +227,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                 } catch (e: Exception) {
-                    mToast.showError(applicationContext, "请求出错")
+                    mToast.showError(applicationContext, "人脸识别失败")
                     isCapturing = false
                 }
             }.onFailure { e ->
@@ -236,6 +239,7 @@ class MainActivity : AppCompatActivity() {
         mViewModel.recognitionResult.observe(this) { result ->
             result.onSuccess {
                 //识别成功，校验token打开门禁
+                mToast.showSuccess(applicationContext, "人脸识别成功")
                 checkAccessToken()
             }.onFailure { e ->
                 mToast.showError(applicationContext, "人脸识别失败")
@@ -246,12 +250,12 @@ class MainActivity : AppCompatActivity() {
         mViewModel.doorResult.observe(this) { result ->
             result.onSuccess { msg ->
                 //门禁已打开
-                mToast.showSuccess(applicationContext, "人脸识别成功")
+                mToast.showSuccess(applicationContext, "门禁开锁成功")
+                stopFaceAnalysis()
             }.onFailure { e ->
                 //门禁打开失败
-                mToast.showError(applicationContext, "门禁开启失败")
+                mToast.showError(applicationContext, "门禁开锁失败:${e.message}")
             }
-            stopFaceAnalysis()
             isCapturing = false
         }
     }
@@ -339,7 +343,7 @@ class MainActivity : AppCompatActivity() {
             if (bean.meetingInfoList.isEmpty()) {
                 binding.meetingStatuesTv.text = "空闲中"
                 binding.meetingContentLl.visibility = View.GONE
-                binding.faceIdentificationRl.visibility = View.VISIBLE
+                binding.faceIdentificationRl.visibility = View.GONE
                 binding.nullOrderRl.visibility = View.VISIBLE
                 binding.orderList.visibility = View.GONE
             } else {
@@ -363,7 +367,7 @@ class MainActivity : AppCompatActivity() {
                             "会议时间：${TimeFormatter.getHoursForTimestamp(firstMeeting.startTime)} 开始"
                         binding.meetingInitiatorTv.text = "发起人：${firstMeeting.promoter}"
                         binding.meetingParticipantTv.visibility = View.GONE
-                        binding.faceIdentificationRl.visibility = View.VISIBLE
+                        binding.faceIdentificationRl.visibility = View.GONE
 
                         "空闲中"
                     }
@@ -434,7 +438,7 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (!allPermissionsGranted()) {
                 Toast.makeText(this, "未授予相机权限", Toast.LENGTH_SHORT).show()
-                finish()
+//                finish()
             }
         }
     }
@@ -592,62 +596,6 @@ class MainActivity : AppCompatActivity() {
             binding.rightContainer.visibility = View.GONE
         }
     }
-
-    /**
-     * 初始化相机
-     * 使用 CameraX API进行预览
-     */
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        cameraProviderFuture.addListener({
-            // 1、将相机的生命周期绑定到生命周期所有者.消除了打开和关闭相机的任务，因为 CameraX 具有生命周期感知能力
-            cameraProvider = cameraProviderFuture.get()
-
-            // 2、初始化您的 Preview 对象，在该对象上调用 build，从取景器中获取表面提供程序，然后在预览中进行设置。
-            preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-
-            imageCapture =
-                ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                    .build()
-
-            // 配置图像分析
-            cameraExecutor = Executors.newSingleThreadExecutor()
-            imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also {
-                    it.setAnalyzer(cameraExecutor!!) { imageProxy ->
-                        LogUtils.d(TAG, "Analyzer 收到回调")
-                        processImageProxy(imageProxy)
-                    }
-                }
-
-            // 优先使用前置摄像头（人脸识别）
-            val cameraSelector =
-                if (cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
-                    LogUtils.d(TAG, "前置摄像头")
-                    CameraSelector.DEFAULT_FRONT_CAMERA
-                } else if (cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
-                    LogUtils.d(TAG, "后置摄像头")
-                    CameraSelector.DEFAULT_BACK_CAMERA
-                } else {
-                    mToast.showError(this, "设备没有可用摄像头")
-                    return@addListener
-                }
-
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageCapture, imageAnalysis
-                )
-                LogUtils.d(TAG, "相机初始化成功")
-            } catch (exc: Exception) {
-                LogUtils.e(TAG, "相机绑定失败", exc)
-                mToast.showError(this, "相机绑定失败")
-            }
-        }, ContextCompat.getMainExecutor(this)) // 回调代码在主线程处理
-    }
-
 
     /**
      * 照片分析

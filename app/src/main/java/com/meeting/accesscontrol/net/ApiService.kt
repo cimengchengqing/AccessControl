@@ -75,7 +75,7 @@ interface ApiService {
      * 人脸识别
      */
     @Multipart
-    @POST("http://39.105.116.125:9561/api/v1/recognition/recognize")
+    @POST("http://47.109.63.175:19005/api/v1/recognition/recognize")
     suspend fun uploadFaceInfo(
         @Header("x-api-key") apiKey: String,
         @Part file: MultipartBody.Part        // 人脸图片

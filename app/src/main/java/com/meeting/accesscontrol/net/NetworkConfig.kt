@@ -5,7 +5,8 @@ package com.meeting.accesscontrol.net
  */
 object NetworkConfig {
     // 基础URL
-    const val BASE_URL = "http://39.105.116.125:9562/api/"
+    const val BASE_URL_TEST = "http://39.105.116.125:9562/api/"
+    const val BASE_URL = "http://47.109.63.175:19006/api/"
 
     // 超时时间
     const val CONNECT_TIMEOUT = 10L
